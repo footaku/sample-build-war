@@ -1,6 +1,11 @@
 name: Package
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: 'アップロード先のReleaseページのTag'
+        required: true
 
 jobs:
   package:
@@ -14,7 +19,22 @@ jobs:
       - name: mvnw package
         run: ./mvnw package
 
+      - name: release page
+        id: release-page
+        run: |
+          echo "::set-output name=id::$(curl -fsL --request GET \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              "https://api.github.com/repos/footaku/sample-build-war/releases/tags/${{ github.event.inputs.release-tag }}" |
+            jq -r .id)"
+
       - name: upload
-        uses: actions/upload-artifact@v2
-        with:
-          path: target/*.war
+        run: |
+          ASSETS_URL="https://uploads.github.com/repos/footaku/sample-build-war/releases/${{ steps.release-page.outputs.id }}/assets"
+          curl -vv --request POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/octet-stream" \
+            --data-binary @"target/sample-build-war-0.0.1-SNAPSHOT.war" \
+            ${ASSETS_URL}?name=$(basename target/sample-build-war-0.0.1-SNAPSHOT.war)
