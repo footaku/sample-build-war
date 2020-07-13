@@ -8,8 +8,13 @@ jobs:
     runs-on: ubuntu-18.04
 
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v2
 
       - name: mvnw package
         run: ./mvnw package
+
+      - name: upload
+        uses: actions/upload-artifact@v2
+        with:
+          path: target/*.war
